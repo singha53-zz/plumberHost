@@ -1,9 +1,12 @@
-FROM trestletech/plumber
-MAINTAINER Docker User <docker@user.org>
+# specify a base image
+FROM node:alpine
 
-# WORKDIR /usr/app
+WORKDIR /usr/app
 
-RUN R -e "install.packages('broom')"
+# install some dependencies
+COPY ./package.json ./
+RUN npm install
 COPY ./ ./
 
-CMD ["/app/plumber.R"]
+# defult command
+CMD ["npm", "start"]
