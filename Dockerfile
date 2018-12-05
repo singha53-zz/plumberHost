@@ -1,7 +1,7 @@
 FROM trestletech/plumber
 MAINTAINER Docker User <docker@user.org>
 
-WORKDIR /usr/app
+# WORKDIR /usr/app
 
 RUN R -e "install.packages('broom')"
 COPY ./ ./
