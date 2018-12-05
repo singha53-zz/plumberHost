@@ -12,6 +12,36 @@ function() {
   list(status = "OK")
 }
 
+#* @filter cors
+cors <- function(req, res) {
+
+  res$setHeader("Access-Control-Allow-Origin", "*")
+
+  if (req$REQUEST_METHOD == "OPTIONS") {
+    res$setHeader("Access-Control-Allow-Methods","*")
+    res$setHeader("Access-Control-Allow-Headers", req$HTTP_ACCESS_CONTROL_REQUEST_HEADERS)
+    res$status <- 200
+    return(list())
+  } else {
+    plumber::forward()
+  }
+
+}
+
+#' Return the sum of two numbers
+#' @param a The first number to add
+#' @param b The second number to add
+#' @post /sum
+function(a, b){
+  as.numeric(a) + as.numeric(b)
+}
+
+#' Subtract two numbers
+#' @post /dat
+function(a){
+  toJSON(fromJSON(a)[, "mpg", drop=FALSE])
+}
+
 #' Builds a Markov model for the input sentences, then generates sentences like the input.
 #' @post /generate
 #' @param input_sentences A vector of sentences for the markov model to learn from.
@@ -29,6 +59,7 @@ function(req,
          sentences_to_generate = 25) {
   
   print("Recieved something!")
+  print(class(input_sentences))
 
   # Run input check.
   if (!is.character(input_sentences) || length(input_sentences) <= 1) {

@@ -1,5 +1,4 @@
 FROM rocker/tidyverse
-MAINTAINER Magnus Furugård <magnus.furugard@gmail.com>
 
 RUN apt-get update -qq && apt-get install -y \ 
     git-core \ 
