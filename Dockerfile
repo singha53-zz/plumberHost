@@ -1,15 +1,27 @@
-# specify a base image
+# A node.js v8 box
 FROM node:8
 
-WORKDIR /usr/app
+# Who(m) to blame if nothing works
+MAINTAINER arvind.ravulavaru@gmail.com
 
-# install some dependencies
-COPY ./package.json ./
-RUN npm install
+# Create a working directory 
+RUN mkdir -p /usr/src/app
+
+# Switch to working directory
+WORKDIR /usr/src/app
+
+# Copy contents of local folder to `WORKDIR`
+# You can pick individual files based on your need
 COPY . .
 
-# Expose port from container so host can access 3000
-EXPOSE 8080
+# Install nodemon globally
+RUN npm install -g nodemon
 
-# defult command
-CMD ["npm", "start"]
+# Install dependencies (if any) in package.json
+RUN npm install
+
+# Expose port from container so host can access 3000
+EXPOSE 3000
+
+# Start the Node.js app on load
+CMD [ "npm", "start" ]
