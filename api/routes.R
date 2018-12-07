@@ -1,10 +1,7 @@
-#* @apiTitle Natural Language Generation through Markov Chains
-#* @apiDescription Stuff.
-
 # Libs
-library(markovifyR)
 library(tidyverse)
 library(jsonlite)
+library(caret)
 
 #' Default GET route.
 #' @get /
@@ -29,82 +26,65 @@ cors <- function(req, res) {
 }
 
 #' Return the sum of two numbers
-#' @param a The first number to add
-#' @param b The second number to add
-#' @post /sum
-function(a, b){
-  as.numeric(a) + as.numeric(b)
-}
+#' @param data expression data
+#' @param outcome response variable
+#' @param key API key
+#' @post /enet
+function(data, outcome, key){
+  print(as.matrix(data)[1:5,1:5])
+  print(factor(outcome))
+  #print(fromJSON(outcome))
+  print(class(key))
+  if(key == "pwd"){
+    ctrl <- trainControl(method = "repeatedcv",
+      number = 5,
+      repeats = 5,
+      summaryFunction = twoClassSummary,
+      classProbs = TRUE,
+      savePredictions = TRUE)
 
-#' Subtract two numbers
-#' @post /dat
-function(a){
-  toJSON(fromJSON(a)[, "mpg", drop=FALSE])
-}
+  # Build a standard classifier using an elastic net
+  set.seed(2)
+  Xtrain <- apply(data, 2, as.numeric)
+  print(Xtrain[1:5,1:5])
+  trainClasses <- factor(outcome)
+  orig_fit <- train(Xtrain, trainClasses,
+    preProc=c("center", "scale"),
+    method = "glmnet",
+    intercept=TRUE,
+    metric = "ROC",
+    trControl = ctrl)
+  # Cross valiation results
+  result <- orig_fit$results %>% 
+    filter(alpha == orig_fit$bestTune$alpha,
+    lambda == orig_fit$bestTune$lambda)
+  # selecte variables
+  panels <- names(which(as.matrix(coef(orig_fit$finalModel, orig_fit$bestTune$lambda))[-1, ] != 0))
 
-#' Builds a Markov model for the input sentences, then generates sentences like the input.
-#' @post /generate
-#' @param input_sentences A vector of sentences for the markov model to learn from.
-#' @param markov_state_size The state size of the Markov model. Defaults to 2 if left empty.
-#' @param max_overlap_total Max overlap total. Defaults to 25 if left empty.
-#' @param max_overlap_ratio Max overlap ratio. Defaults to 0.85 if left empty.
-#' @param maximum_sentence_length The max length (in characters) of sentences to be generated. Is also depends on input sentences in `strings`. Defaults to 200 if left empty.
-#' @param sentences_to_generate The number of sentences to generate. These will be distinct. Defaults to 25 if left empty.
-function(req,
-         input_sentences,
-         markov_state_size = 2L,
-         max_overlap_total = 25,
-         max_overlap_ratio = 0.85, 
-         maximum_sentence_length = 200, 
-         sentences_to_generate = 25) {
+  ## compute pcs on selected data
+  pr <- prcomp(t(Xtrain), center = TRUE, scale. = TRUE)
+  scatterData = list(
+  list(id = unbox(levels(trainClasses)[1]), 
+    data = unbox(as.data.frame(pr$rotation)[trainClasses == levels(trainClasses)[1], 1:2])),
+  list(id = unbox(levels(trainClasses)[2]), 
+    data = unbox(as.data.frame(pr$rotation)[trainClasses == levels(trainClasses)[2], 1:2])))
+  # scatterData = list(
+  # list(id = unbox(levels(trainClasses)[1]), 
+  #   data = toJSON(as.data.frame(pr$rotation)[trainClasses == levels(trainClasses)[1], 1:2], auto_unbox = TRUE, pretty = FALSE)),
+  # list(id = unbox(levels(trainClasses)[2]), 
+  #   data = toJSON(as.data.frame(pr$rotation)[trainClasses == levels(trainClasses)[2], 1:2], auto_unbox = TRUE, pretty = FALSE)))
   
-  print("Recieved something!")
-  print(class(input_sentences))
 
-  # Run input check.
-  if (!is.character(input_sentences) || length(input_sentences) <= 1) {
-    req$status = 400
-    req$body = "`input_sentences` is not a character vector, or is only a single value."
-    return(req)
+  # send result back to user
+  list(n=nrow(Xtrain), 
+       p=ncol(Xtrain), 
+       p_selected = length(panels), 
+       auc=paste0(round(result$ROC*100, 1), "%"), 
+       perf=paste(paste0(round(result$Sens*100, 1), "%"), paste0(round(result$Spec*100, 1), "%"), sep="/"), 
+       panels=panels, 
+       scatterData=scatterData)
+
+  } else {
+    "Wrong API key used!"
   }
-  
-  print("Input validations passed.")
-  
-  # Coerce options user inputs to numerics.
-  markov_state_size = as.numeric(markov_state_size)
-  max_overlap_total = as.numeric(max_overlap_total)
-  max_overlap_ratio = as.numeric(max_overlap_ratio)
-  maximum_sentence_length = as.numeric(maximum_sentence_length)
-  sentences_to_generate = as.numeric(sentences_to_generate)
-  
-  print("Coerced options to numerics.")
-  
-  # Build Markov model based on inputs.
-  markov_model = generate_markovify_model(
-    input_text = input_sentences,
-    markov_state_size = markov_state_size,
-    max_overlap_total = max_overlap_total,
-    max_overlap_ratio = max_overlap_ratio
-  )
-  
-  print("Generated Markov model.")
-  
-  # Generate new sentences from model.
-  output = markovify_text(
-    markov_model = markov_model,
-    maximum_sentence_length = maximum_sentence_length,
-    output_column_name = 'generated',
-    count = sentences_to_generate,
-    tries = 100,
-    only_distinct = TRUE,
-    return_message = FALSE
-  )
-  
-  print("Successfully created output.")
-
-  # Return new sentences.
-  return(
-    list(generated = output$generated)
-  )
-  
 }
