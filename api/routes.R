@@ -65,9 +65,10 @@ function(data, outcome, key){
   pr <- prcomp(t(Xtrain), center = TRUE, scale. = TRUE)
   scatterData = list(
   list(id = unbox(levels(trainClasses)[1]), 
-    data = unbox(as.data.frame(pr$rotation)[trainClasses == levels(trainClasses)[1], 1:2])),
+    data = setNames(as.data.frame(pr$rotation)[trainClasses == levels(trainClasses)[1], 1:2], c("x", "y"))),
   list(id = unbox(levels(trainClasses)[2]), 
-    data = unbox(as.data.frame(pr$rotation)[trainClasses == levels(trainClasses)[2], 1:2])))
+    data = setNames(as.data.frame(pr$rotation)[trainClasses == levels(trainClasses)[2], 1:2], c("x", "y"))))
+    print(scatterData)
   # scatterData = list(
   # list(id = unbox(levels(trainClasses)[1]), 
   #   data = toJSON(as.data.frame(pr$rotation)[trainClasses == levels(trainClasses)[1], 1:2], auto_unbox = TRUE, pretty = FALSE)),
